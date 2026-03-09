@@ -39,10 +39,52 @@ async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await context.bot.send_message(chat_id=update.effective_chat.id, text="pong")
 
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+# Маршруты пересылки:
+# Ключ — ID чата-источника.
+# Значение:
+#   - target_chat_id — ID чата-получателя
+#   - topic_id       — ID темы (message_thread_id) в чате-получателе, либо None
+#
+# Примеры (раскомментируй и подставь свои ID):
+# ROUTES = {
+#     -1001111111111: {"target_chat_id": -1002222222222, "topic_id": 10},
+#     -1003333333333: {"target_chat_id": -1002222222222, "topic_id": 15},
+# }
+ROUTES: dict[int, dict[str, int | None]] = {}
+
+
+async def route_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_chat or not update.message or not update.message.text:
         return
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+
+    src_chat_id = update.effective_chat.id
+    src_thread_id = update.message.message_thread_id
+    text = update.message.text
+
+    logger.info(
+        "Incoming message: chat_id=%s thread_id=%s text=%r",
+        src_chat_id,
+        src_thread_id,
+        text[:100],
+    )
+
+    route = ROUTES.get(src_chat_id)
+    if not route:
+        return
+
+    target_chat_id = route["target_chat_id"]
+    topic_id = route.get("topic_id")
+
+    send_kwargs: dict = {}
+    if topic_id is not None:
+        send_kwargs["message_thread_id"] = topic_id
+
+    # Отправляем текст от имени бота, без пометки "переслано"
+    await context.bot.send_message(
+        chat_id=target_chat_id,
+        text=text,
+        **send_kwargs,
+    )
 
 
 telegram_app = (
@@ -52,7 +94,7 @@ telegram_app = (
 )
 telegram_app.add_handler(CommandHandler("start", start_cmd))
 telegram_app.add_handler(CommandHandler("ping", ping_cmd))
-telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, route_message))
 
 
 def _webhook_url() -> str:
