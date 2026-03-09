@@ -46,11 +46,22 @@ async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 #   - topic_id       — ID темы (message_thread_id) в чате-получателе, либо None
 #
 # Примеры (раскомментируй и подставь свои ID):
-# ROUTES = {
+# ROUTES: dict[int, dict[str, int | None]] = {
 #     -1001111111111: {"target_chat_id": -1002222222222, "topic_id": 10},
 #     -1003333333333: {"target_chat_id": -1002222222222, "topic_id": 15},
 # }
-ROUTES: dict[int, dict[str, int | None]] = {}
+
+# Текущая реальная схема маршрутизации:
+ROUTES: dict[int, dict[str, int | None]] = {
+    -2705141042: {
+        "target_chat_id": -1002290371611,
+        "topic_id": 11,
+    },
+    -4973230673: {
+        "target_chat_id": -1002290371611,
+        "topic_id": 2,
+    },
+}
 
 
 async def route_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
